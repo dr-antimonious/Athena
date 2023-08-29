@@ -16,8 +16,9 @@
                 <br />
                 <div class="d-flex justify-content-center text-start">
                     <form method="post">
-                        <label for="username" class="form-label text-white">username</label>
-                        <input name="username" id="username" type="text" class="form-control" placeholder="coolGuy123" value="@TempData["username"]"/>
+                        <label for="email" class="form-label text-white">e-mail address</label>
+                        <input asp-for="@Model.email" name="email" id="email" type="email" class="form-control" placeholder="user@example.com" value="@TempData["email"]"/>
+                        <span asp-validation-for="@Model.email" class="Error"></span>
                         <br />
                         <label for="password" class="form-label text-white">password</label>
                         <input name="password" id="password" type="password" class="form-control" placeholder="password"/>
