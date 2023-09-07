@@ -1,0 +1,51 @@
+﻿@page
+@model ShootingWebsite.Pages.DeleteAccountModel
+@{
+    ViewData["Title"] = "Account";
+}
+
+<div class="container-fluid" style="font-family: Poppins; font-style: normal">
+    <div class="row bg-black">
+        <div class="d-flex justify-content-center align-items-center col-md-2">
+            <a class="d-flex justify-content-start" asp-page="/Interface">
+                <img class="ms-3 mt-3 mb-3" style="width: 25%" src="img/logocropDark.png" />
+            </a>
+        </div>
+        <div class="col-md-4"></div>
+        <div class="d-flex justify-content-end align-items-center col-md-6">
+            <a asp-page="/Interface" style="font-weight: 400" class="mt-3 mb-3 me-3 btn btn-light">go back</a>
+            <a asp-page="/Logout" style="font-weight: 400" class="mt-3 mb-3 me-3 btn btn-light">log out</a>
+        </div>
+    </div>
+    <div class="d-flex row justify-content-center align-items-center">
+        <div class="mt-3 shadow p-3 mb-5 rounded col-md-6">
+            <form method="post">
+                <label for="@Model.UserDeleteRequest.Email" class="form-label">e-mail address</label>
+                <input asp-for="@Model.UserDeleteRequest.Email" type="email" class="form-control" placeholder="coolguy123@gmail.com" value="@Model.UserDeleteRequest.Email"/>
+                <span asp-validation-for="@Model.UserDeleteRequest.Email" class="text-danger"></span>
+                <br/>
+                <label for="@Model.Password" class="form-label">password</label>
+                <input asp-for="@Model.Password" type="password" class="form-control" placeholder="password" value="@Model.Password"/>
+                <span asp-validation-for="@Model.Password" class="text-danger"></span>
+                <br/>
+                <button type="submit" class="btn btn-danger">delete account</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    label {
+        display: block;
+    }
+
+    span {
+        display: block;
+        max-width: 20em;
+        word-break: normal;
+    }
+</style>
+
+@section scripts{
+    <partial name="Shared/_ValidationScriptsPartial" />
+}

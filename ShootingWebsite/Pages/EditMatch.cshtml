@@ -1,78 +1,95 @@
 ﻿@page
+@using Artemis.Contracts.DTOs
 @model EditMatch
 @{
-    ViewData["Title"] = TempData["matchId"];
+    ViewData["Title"] = "Match";
 }
 
 <div class="container-fluid" style="font-family: Poppins; font-style: normal">
     <div class="row bg-black">
         <div class="d-flex justify-content-center align-items-center col-md-2">
-            <a class="d-flex justify-content-center" asp-page="/Interface">
+            <a class="d-flex justify-content-start" asp-page="/Interface">
                 <img class="ms-3 mt-3 mb-3" style="width: 25%" src="img/logocropDark.png" />
             </a>
         </div>
-        <div class="col-md-8"></div>
-        <div class="d-flex justify-content-center align-items-center col-md-2">
+        <div class="col-md-4"></div>
+        <div class="d-flex justify-content-end align-items-center col-md-6">
+            <a asp-page="/Interface" style="font-weight: 400" class="mt-3 mb-3 me-3 btn btn-light">go back</a>
+            <a asp-page="/EditAccount" style="font-weight: 400" class="mt-3 mb-3 me-3 btn btn-light">edit account</a>
             <a asp-page="/Logout" style="font-weight: 400" class="mt-3 mb-3 me-3 btn btn-light">log out</a>
         </div>
     </div>
     <div class="d-flex row justify-content-center align-items-center">
         <div class="mt-3 shadow p-3 mb-5 rounded col-md-6">
             <form method="post">
-                <label for="date" class="form-label">Date:</label>
-                <input name="date" id="date" type="date" class="form-control" value="@TempData["date"]"/>
+                <label for="Type" class="form-label">Discipline:</label>
+                <p id="Type" class="text-black">@Model.MatchUpdateRequest.Type</p>
+                <label for="@Model.Date" class="form-label">Date:</label>
+                <input asp-for="@Model.Date" type="date" class="form-control" placeholder="@DateTime.Now.Date.ToString("yyyy-MM-dd")" value="@Model.Date.ToString("yyyy-MM-dd")"/>
+                <span asp-validation-for="@Model.Date" class="text-danger"></span>
+                <br/>
+                <label for="@Model.StartTime" class="form-label">Start time:</label>
+                <input asp-for="@Model.StartTime" type="time" class="form-control" placeholder="@DateTime.Now.TimeOfDay.ToString("hh\\:mm")" value="@Model.StartTime.TimeOfDay.ToString("hh\\:mm")"/>
+                <span asp-validation-for="@Model.StartTime" class="text-danger"></span>
+                <br/>
+                <label for="@Model.EndTime" class="form-label">End time:</label>
+                <input asp-for="@Model.EndTime" type="time" class="form-control" placeholder="@DateTime.Now.TimeOfDay.ToString("hh\\:mm")" value="@Model.EndTime.TimeOfDay.ToString("hh\\:mm")"/>
+                <span asp-validation-for="@Model.EndTime" class="text-danger"></span>
+                <br/>
+                <label for="@Model.Country.Name" class="form-label">Country:</label>
+                <input asp-for="@Model.Country.Name" type="text" class="form-control" placeholder="Country" value="@Model.Country.Name" />
+                <span asp-validation-for="@Model.Country.Name" class="text-danger"></span>
+                <br/>
+                <label for="@Model.City.Name" class="form-label">City:</label>
+                <input asp-for="@Model.City.Name" type="text" class="form-control" placeholder="City" value="@Model.City.Name" />
+                <span asp-validation-for="@Model.City.Name" class="text-danger"></span>
                 <br />
-                <label for="startTime" class="form-label">Start time:</label>
-                <input name="startTime" id="startTime" type="time" class="form-control" value="@TempData["startTime"]" />
+                <label for="@Model.Location.Name" class="form-label">Location:</label>
+                <input asp-for="@Model.Location.Name" type="text" class="form-control" placeholder="Location" value="@Model.Location.Name" />
+                <span asp-validation-for="@Model.Location.Name" class="text-danger"></span>
                 <br />
-                <label for="endTime" class="form-label">End time:</label>
-                <input name="endTime" id="endTime" type="time" class="form-control" value="@TempData["endTime"]" />
+                <label for="@Model.MatchUpdateRequest.AirTemperature" class="form-label">Air temperature (°C):</label>
+                <input asp-for="@Model.MatchUpdateRequest.AirTemperature" type="number" class="form-control" placeholder="25" value="@Model.MatchUpdateRequest.AirTemperature"/>
+                <br/>
+                <label for="@Model.MatchUpdateRequest.AirPressure" class="form-label">Air pressure (kPa):</label>
+                <input asp-for="@Model.MatchUpdateRequest.AirPressure" type="number" class="form-control" placeholder="1000" value="@Model.MatchUpdateRequest.AirPressure"/>
+                <br/>
+                <label for="@Model.MatchUpdateRequest.WindSpeed" class="form-label">Wind speed (km/h):</label>
+                <input asp-for="@Model.MatchUpdateRequest.WindSpeed" type="number" class="form-control" placeholder="10" value="@Model.MatchUpdateRequest.WindSpeed" />
                 <br />
-                <label for="location" class="form-label">Location:</label>
-                <input name="location" id="location" type="text" class="form-control" value="@TempData["location"]" />
+                <label for="@Model.MatchUpdateRequest.WindDirection" class="form-label">Wind direction:</label>
+                <input asp-for="@Model.MatchUpdateRequest.WindDirection" type="text" class="form-control" pattern="^([XNS]?[EW]?){0,2}$" placeholder="N/S/E/W/NE/NW/SE/SW" value="@Model.MatchUpdateRequest.WindDirection" />
+                <span asp-validation-for="@Model.MatchUpdateRequest.WindDirection" class="text-danger"></span>
                 <br />
-                <label for="result" class="form-label">Result:</label>
-                <input name="result" id="result" type="number" class="form-control" value="@TempData["result"]" />
-                <br />
-                <label for="inner10s" class="form-label">Inner 10s:</label>
-                <input name="inner10s" id="inner10s" type="number" class="form-control" value="@TempData["inner10s"]" />
-                <br />
-                <label for="temperature" class="form-label">Temperature (°C):</label>
-                <input name="temperature" id="temperature" type="number" class="form-control" value="@TempData["temperature"]" />
-                <br />
-                <label for="humidity" class="form-label">Humidity (%):</label>
-                <input name="humidity" id="humidity" type="number" class="form-control" value="@TempData["humidity"]" />
-                <br />
-                <label for="airPressure" class="form-label">Air pressure (kPa):</label>
-                <input name="airPressure" id="airPressure" type="number" class="form-control" value="@TempData["airPressure"]"/>
-                <br />
-                <label for="mood" class="form-label">Overall mood:</label>
-                <input name="mood" id="mood" type="text" class="form-control" value="@TempData["mood"]" />
-                <br />
-                <label for="notes" class="form-label">Notes:</label>
-                <input name="notes" id="notes" type="text" class="form-control" value="@TempData["notes"]" />
-                <br />
-                @for (int i = 1; i < 7; i++)
+                <label for="@Model.MatchUpdateRequest.EnvironmentNotes" class="form-label">Notes about your environment:</label>
+                <input asp-for="@Model.MatchUpdateRequest.EnvironmentNotes" type="text" class="form-control" placeholder="Notes..." value="@Model.MatchUpdateRequest.EnvironmentNotes" />
+                <br/>
+                <label for="@Model.MatchUpdateRequest.EquipmentNotes" class="form-label">Notes about your equipment:</label>
+                <input asp-for="@Model.MatchUpdateRequest.EquipmentNotes" type="text" class="form-control" placeholder="Notes..." value="@Model.MatchUpdateRequest.EquipmentNotes" />
+                <br/>
+                <label for="@Model.MatchUpdateRequest.ShooterNotes" class="form-label">Notes about yourself and the match:</label>
+                <input asp-for="@Model.MatchUpdateRequest.ShooterNotes" type="text" class="form-control" placeholder="Notes..." value="@Model.MatchUpdateRequest.ShooterNotes" />
+                <br/>
+                @foreach (ExtendedShotDto shot in Model.MatchUpdateRequest.Shots)
                 {
-                    <p style="font-weight: 700">Series @i:</p>
-                    <label for="startTime-@i" class="form-label">Start time:</label>
-                    <input name="startTime-@i" id="startTime-@i" type="time" class="form-control" value="@TempData[$"startTime-{@i}"]"/>
-                    <br />
-                    <label for="endTime-@i" class="form-label">End time:</label>
-                    <input name="endTime-@i" id="endTime-@i" type="time" class="form-control" value="@TempData[$"endTime-{@i}"]"/>
-                    <br />
-                    <label for="result-@i" class="form-label">Result:</label>
-                    <input name="result-@i" id="result-@i" type="number" class="form-control" value="@TempData[$"result-{@i}"]"/>
-                    <br />
-                    <label for="decimal-@i" class="form-label">Decimal (use dot, not comma!):</label>
-                    <input name="decimal-@i" id="decimal-@i" type="text" class="form-control" value="@TempData[$"decimal-{@i}"]"/>
-                    <br />
-                    <label for="inner10s-@i" class="form-label">Inner 10s:</label>
-                    <input name="inner10s-@i" id="inner10s-@i" type="number" class="form-control" value="@TempData[$"inner10s-{@i}"]"/>
-                    <br />
-                    <label for="notes-@i" class="form-label">Notes:</label>
-                    <input name="notes-@i" id="notes-@i" type="text" class="form-control" value="@TempData[$"notes-{@i}"]"/>
-                    <br />
+                    <p style="font-weight: 700">Shot @(shot.Position):</p>
+                    <label for="@Model.MatchUpdateRequest.Shots[shot.Position - 1].Value" class="form-label">Value (if decimal use dot, not comma):</label>
+                    <input asp-for="@Model.MatchUpdateRequest.Shots[shot.Position - 1].Value" type="text" class="form-control" placeholder="10.9" value="@Model.MatchUpdateRequest.Shots[shot.Position - 1].Value.ToString()"/>
+                    <span asp-validation-for="@Model.MatchUpdateRequest.Shots[shot.Position - 1].Value" class="text-danger"></span>
+                    <br/>
+                    if (!Model.MatchUpdateRequest.Type.Equals("TS"))
+                    {
+                        <label for="@Model.MatchUpdateRequest.Shots[shot.Position - 1].Timestamp" class="form-label">Timestamp:</label>
+                        <input asp-for="@Model.MatchUpdateRequest.Shots[shot.Position - 1].Timestamp" type="time" class="form-control" placeholder="@DateTime.Now.TimeOfDay.ToString("hh\\:mm")" value="@Model.MatchUpdateRequest.Shots[shot.Position - 1].Timestamp?.TimeStamp.TimeOfDay.ToString("hh\\:mm")" />
+                        <br/>
+                        <label for="@Model.MatchUpdateRequest.Shots[shot.Position - 1].HorizontalDisplacement" class="form-label">Horizontal displacement:</label>
+                        <input asp-for="@Model.MatchUpdateRequest.Shots[shot.Position - 1].HorizontalDisplacement" type="text" class="form-control" placeholder="0.0" value="@Model.MatchUpdateRequest.Shots[shot.Position - 1].HorizontalDisplacement?.ToString()" />
+                        <br/>
+                        <label for="@Model.MatchUpdateRequest.Shots[shot.Position - 1].VerticalDisplacement" class="form-label">Vertical displacement:</label>
+                        <input asp-for="@Model.MatchUpdateRequest.Shots[shot.Position - 1].VerticalDisplacement" type="text" class="form-control" placeholder="0.0" value="@Model.MatchUpdateRequest.Shots[shot.Position - 1].VerticalDisplacement?.ToString()" />
+                        <span asp-validation-for="@Model.MatchUpdateRequest.Shots[shot.Position - 1].VerticalDisplacement" class="text-danger"></span>
+                        <br/>
+                    }
                 }
                 <button type="submit" class="btn btn-dark">save match</button>
             </form>
@@ -81,5 +98,17 @@
 </div>
 
 <style>
-    label { display: block;}
+    label { 
+        display: block;
+    }
+
+    span {
+        display: block;
+        max-width: 25em;
+        word-break: normal;
+    }
 </style>
+
+@section scripts{
+    <partial name="Shared/_ValidationScriptsPartial"/>
+}

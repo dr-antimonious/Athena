@@ -1,67 +1,128 @@
 ﻿@page
+@using System.Runtime.CompilerServices
+@using Artemis.Contracts.Entities
+@using Artemis.Contracts.Entities.Matches
+@using Microsoft.IdentityModel.Tokens
 @model MatchDetails
 @{
-    ViewData["Title"] = TempData["matchId"];
+    ViewData["Title"] = "View match";
+    List<ITuple> seriesList = Model.MatchResult[0] as List<ITuple>;
 }
 
 <div class="container-fluid" style="font-family: Poppins; font-style: normal">
     <div class="row bg-black">
         <div class="d-flex justify-content-center align-items-center col-md-2">
-            <a class="d-flex justify-content-center" asp-page="/Interface">
+            <a class="d-flex justify-content-start" asp-page="/Interface">
                 <img class="ms-3 mt-3 mb-3" style="width: 25%" src="img/logocropDark.png"/>
             </a>
         </div>
-        <div class="col-md-8"></div>
-        <div class="d-flex justify-content-center align-items-center col-md-2">
+        <div class="col-md-6"></div>
+        <div class="d-flex justify-content-end align-items-center col-md-4">
+            <a asp-page="/EditAccount" style="font-weight: 400" class="mt-3 mb-3 me-3 btn btn-light">edit account</a>
             <a asp-page="/Logout" style="font-weight: 400" class="mt-3 mb-3 me-3 btn btn-light">log out</a>
         </div>
     </div>
     <div class="d-flex row justify-content-center align-items-center">
-        <div class="mt-3 shadow p-3 mb-5 rounded col-md-6">
+        <div class="mt-3 shadow p-3 mb-5 rounded col-md-10">
             <div class="row">
                 <div class="d-flex justify-content-start align-items-center">
-                    <a href="/EditMatch?matchId=@Model.matchDictionary["id"]" style="font-weight: 400" class="mt-3 mb-3 ms-3 btn btn-dark">edit match</a>
+                    <a href="/DeleteMatch?matchId=@Model.Match.Id" style="font-weight: 400" class="mt-3 mb-3 ms-3 btn btn-danger">delete match</a>
+                    <a href="/EditMatch?matchId=@Model.Match.Id" style="font-weight: 400" class="mt-3 mb-3 ms-3 btn btn-dark">edit match</a>
                     <a href="/Interface" style="font-weight: 400" class="mt-3 mb-3 ms-3 btn btn-dark">go back</a>
                 </div>
             </div>
             <div class="row">
                 <div class="d-flex justify-content-start align-items-center">
                     <h6 class="ms-3 mb-3" style="font-weight: 700">Date:</h6>
-                    <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.matchDictionary["Date"]</h6>
+                    <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.Match.StartTimestamp.TimeStamp.Date.ToString("yyyy-MM-dd")</h6>
                     <h6 class="ms-3 mb-3" style="font-weight: 700">Start time:</h6>
-                    <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.matchDictionary["StartTime"]</h6>
+                    <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.Match.StartTimestamp.TimeStamp.TimeOfDay.ToString("hh\\:mm")</h6>
                     <h6 class="ms-3 mb-3" style="font-weight: 700">End time:</h6>
-                    <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.matchDictionary["EndTime"]</h6>
+                    <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.Match.EndTimestamp.TimeStamp.TimeOfDay.ToString("hh\\:mm")</h6>
                 </div>
             </div>
             <div class="row">
                 <div class="d-flex justify-content-start align-items-center">
                     <h6 class="ms-3 mb-3" style="font-weight: 700">Location:</h6>
-                    <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.matchDictionary["Location"]</h6>
-                    <h6 class="ms-3 mb-3" style="font-weight: 700">Temperature:</h6>
-                    <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.matchDictionary["Temperature"]</h6>
-                    <h6 class="ms-3 mb-3" style="font-weight: 700">Humidity:</h6>
-                    <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.matchDictionary["Humidity"]</h6>
-                    <h6 class="ms-3 mb-3" style="font-weight: 700">Air pressure:</h6>
-                    <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.matchDictionary["AirPressure"]</h6>
+                    <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.Match.Location.Name</h6>
+                    @if (Model.Match.AirTemperature is not null)
+                    {
+                        <h6 class="ms-3 mb-3" style="font-weight: 700">Air temperature (°C):</h6>
+                        <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.Match.AirTemperature</h6>
+                    }
+                    @if (Model.Match.AirPressure is not null)
+                    {
+                        <h6 class="ms-3 mb-3" style="font-weight: 700">Air pressure (kPa):</h6>
+                        <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.Match.AirPressure</h6>
+                    }
+                    @if (Model.Match.WindSpeed is not null)
+                    {
+                        <h6 class="ms-3 mb-3" style="font-weight: 700">Wind speed (km/h):</h6>
+                        <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.Match.WindSpeed</h6>
+                    }
+                    @if (!Model.Match.WindDirection.IsNullOrEmpty() && !Model.Match.WindDirection.Contains('X'))
+                    {
+                        <h6 class="ms-3 mb-3" style="font-weight: 700">Wind direction:</h6>
+                        <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.Match.WindDirection</h6>
+                    }
                 </div>
             </div>
             <div class="row">
                 <div class="d-flex justify-content-start align-items-center">
                     <h6 class="ms-3 mb-3" style="font-weight: 700">Result:</h6>
-                    <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.matchDictionary["Result"]</h6>
-                    <h6 class="ms-3 mb-3" style="font-weight: 700">Inner 10s:</h6>
-                    <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.matchDictionary["Inner10s"]</h6>
-                    <h6 class="ms-3 mb-3" style="font-weight: 700">Mood:</h6>
-                    <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.matchDictionary["Mood"]</h6>
+                    @if (seriesList[0][0] is null)
+                    {
+                        <h6 class="ms-3 mb-3" style="font-weight: 400">@($"{Model.MatchResult[2]:0.0}")</h6>
+                    }
+                    else if (seriesList[0][1] is null)
+                    {
+                        <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.MatchResult[1]</h6>
+                    }
+                    else
+                    {
+                        <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.MatchResult[1]</h6>
+                        <h6 class="ms-3 mb-3" style="font-weight: 700">Decimal result:</h6>
+                        <h6 class="ms-3 mb-3" style="font-weight: 400">@($"{Model.MatchResult[2]:0.0}")</h6>
+                    }
+                    @if (seriesList[0][2] is not null)
+                    {
+                        <h6 class="ms-3 mb-3" style="font-weight: 700">Inner 10s:</h6>
+                        <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.MatchResult[3]</h6>
+                    }
                 </div>
             </div>
-            <div class="row">
-                <div class="d-flex justify-content-start align-items-center">
-                    <h6 class="ms-3 mb-3" style="font-weight: 700">Notes:</h6>
-                    <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.matchDictionary["Notes"]</h6>
-                </div>
-            </div>
+            @if (Model.Match.EquipmentNotes is not null
+                 || Model.Match.EnvironmentNotes is not null
+                 || Model.Match.ShooterNotes is not null)
+            {
+                @if (Model.Match.EquipmentNotes is not null)
+                {
+                    <div class="row">
+                        <div class="d-flex justify-content-start align-items-center">
+                            <h6 class="ms-3 mb-3" style="font-weight: 700">Equipment notes:</h6>
+                            <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.Match.EquipmentNotes</h6>
+                        </div>
+                    </div>
+                }
+                @if (Model.Match.EnvironmentNotes is not null)
+                {
+                    <div class="row">
+                        <div class="d-flex justify-content-start align-items-center">
+                            <h6 class="ms-3 mb-3" style="font-weight: 700">Environment notes:</h6>
+                            <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.Match.EnvironmentNotes</h6>
+                        </div>
+                    </div>
+                }
+                @if (Model.Match.ShooterNotes is not null)
+                {
+                    <div class="row">
+                        <div class="d-flex justify-content-start align-items-center">
+                            <h6 class="ms-3 mb-3" style="font-weight: 700">Shooter notes:</h6>
+                            <h6 class="ms-3 mb-3" style="font-weight: 400">@Model.Match.ShooterNotes</h6>
+                        </div>
+                    </div>
+                }
+            }
             <div class="row">
                 <div class="d-flex justify-content-start align-items-center">
                     <h4 class="ms-3 mb-3" style="font-weight: 700">Series:</h4>
@@ -71,29 +132,81 @@
                 <div class="d-flex justify-content-start align-items-center">
                     <table class="table ms-3 mb-3 me-3">
                         <thead>
-                            <tr>
-                                <th scope="col">#</th>
-                                <th scope="col">Start time</th>
-                                <th scope="col">End time</th>
-                                <th scope="col">Result</th>
-                                <th scope="col">Decimal</th>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Result</th>
+                            @if (seriesList[0][0] is not null && seriesList[0][1] is not null)
+                            {
+                                <th scope="col">Decimal result</th>
+                            }
+                            @if (seriesList[0][2] is not null)
+                            {
                                 <th scope="col">Inner 10s</th>
-                                <th scope="col">Notes</th>
-                            </tr>
+                            }
+                        </tr>
                         </thead>
                         <tbody>
-                            @foreach (Dictionary<String, String> seriesDictionary in Model.series)
+                        @for (int index = 0; index < seriesList.Count; index++)
+                        {
+                            <tr>
+                                <th scope="row">@(index + 1)</th>
+                                @if (seriesList[index][0] is null)
+                                {
+                                    <td>@($"{seriesList[index][1]:0.0}")</td>
+                                }
+                                else if(seriesList[index][1] is null)
+                                {
+                                    <td>@seriesList[index][0]</td>
+                                }
+                                else
+                                {
+                                    <td>@seriesList[index][0]</td>
+                                    <td>@($"{seriesList[index][1]:0.0}")</td>
+                                }
+                                @if (seriesList[index][2] is not null)
+                                {
+                                    <td>@seriesList[index][2]</td>
+                                }
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="row">
+                <div class="d-flex justify-content-start align-items-center">
+                    <h4 class="ms-3 mb-3" style="font-weight: 700">Shots:</h4>
+                </div>
+            </div>
+            <div class="row">
+                <div class="d-flex justify-content-start align-items-center">
+                    <table class="table ms-3 mb-3 me-3">
+                        <thead>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Value</th>
+                            @if (!Match.TypeConversion[Model.Match.GetType()].Equals("TS"))
                             {
-                                <tr>
-                                    <th scope="row">@seriesDictionary["id"]</th>
-                                    <td>@seriesDictionary["StartTime"]</td>
-                                    <td>@seriesDictionary["EndTime"]</td>
-                                    <td>@seriesDictionary["Result"]</td>
-                                    <td>@seriesDictionary["Decimal"]</td>
-                                    <td>@seriesDictionary["Inner10s"]</td>
-                                    <td>@seriesDictionary["Notes"]</td>
-                                </tr>
+                                <th scope="col">Timestamp</th>
+                                <th scope="col">Horizontal displacement</th>
+                                <th scope="col">Vertical displacement</th>
                             }
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (Shot shot in Model.Match.Shots)
+                        {
+                            <tr>
+                                <th scope="row">@shot.Position</th>
+                                <td>@shot.Value</td>
+                                @if (!Match.TypeConversion[Model.Match.GetType()].Equals("TS"))
+                                {
+                                    <td>@(shot.TimeStamp is null ? "N/A" : shot.TimeStamp.TimeStamp.TimeOfDay.ToString("hh\\:mm"))</td>
+                                    <td>@(shot.HorizontalDisplacement is null ? "N/A" : shot.HorizontalDisplacement)</td>
+                                    <td>@(shot.VerticalDisplacement is null ? "N/A" : shot.VerticalDisplacement)</td>
+                                }
+                            </tr>
+                        }
                         </tbody>
                     </table>
                 </div>

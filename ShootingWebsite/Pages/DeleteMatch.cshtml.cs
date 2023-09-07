@@ -1,103 +1,60 @@
-using Google.Cloud.Firestore;
+using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Net.Http.Headers;
+using Microsoft.IdentityModel.Tokens;
 
 namespace ShootingWebsite.Pages
 {
     public class DeleteMatch : PageModel
     {
-        public async Task<RedirectResult?> OnGet([FromQuery] String matchId)
+        private readonly IHttpClientFactory _httpClientFactory;
+
+        public async Task<IActionResult?> OnGet([FromQuery] string matchId)
         {
-            bool valid = false;
-            DocumentSnapshot? user = null;
-            DocumentSnapshot? match = null;
-            DocumentReference? matchRef = null;
-            FirestoreDb db = FirestoreDb.Create("shootingdiary-orwima");
-
-            if (String.IsNullOrWhiteSpace(matchId))
+            if (!Request.Cookies.TryGetValue("Bearer", out string? bearerToken))
             {
-                TempData["AlertDanger"] = "Something went wrong. Please try again later.";
-                return Redirect("/Interface");
+                TempData["AlertDanger"] = "You are not logged in.";
+                return RedirectToPage("/Index");
             }
 
-            if (Request.Cookies.TryGetValue("userId", out String? userId))
+            if (matchId.IsNullOrEmpty())
             {
-                if (String.IsNullOrWhiteSpace(userId))
-                {
-                    TempData["AlertDanger"] = "You are not logged in. Please log in or register.";
-                    return Redirect("/Index");
-                }
-
-                CollectionReference collection = db.Collection("users");
-                IAsyncEnumerable<DocumentReference> documentRefs =
-                    collection.ListDocumentsAsync();
-
-                await foreach (DocumentReference document in documentRefs)
-                {
-                    DocumentSnapshot temp = await document.GetSnapshotAsync();
-                    if (temp.Id == userId)
-                    {
-                        user = temp;
-                        valid = true;
-                        break;
-                    }
-                }
+                TempData["AlertDanger"] = "No ID provided for match deletion.";
+                return RedirectToPage("/Interface");
             }
 
-            else
+            var request = new HttpRequestMessage(HttpMethod.Delete,
+                $"http://172.19.0.3:80/artemis/data/match/delete?id={matchId}");
+            var client = _httpClientFactory.CreateClient();
+            var header = new AuthenticationHeaderValue("Bearer", bearerToken);
+            request.Headers.Authorization = header;
+            HttpResponseMessage response = await client.SendAsync(request);
+
+            if (response.StatusCode.Equals(HttpStatusCode.OK))
             {
-                TempData["AlertDanger"] = "You are not logged in. Please log in or register.";
-                return Redirect("/Index");
+                TempData["AlertSuccess"] = "Match deleted successfully.";
+                return RedirectToPage("/Interface");
             }
 
-            if (!valid)
+            if (response.StatusCode.Equals(HttpStatusCode.Unauthorized))
             {
-                TempData["AlertDanger"] = "Incorrect userId found in cookies. Please login or register.";
-                return Redirect("/Logout");
+                TempData["AlertDanger"] = "You are not logged in.";
+                Response.Cookies.Delete("Bearer");
+                return RedirectToPage("/Index");
             }
 
-            CollectionReference matchesRef = db.Collection("matches");
-            IAsyncEnumerable<DocumentReference> matchRefs =
-                matchesRef.ListDocumentsAsync();
-            valid = false;
-
-            await foreach (DocumentReference document in matchRefs)
+            if (response.StatusCode.Equals(HttpStatusCode.NotFound))
             {
-                DocumentSnapshot temp = await document.GetSnapshotAsync();
-                if (temp.Id == matchId)
-                {
-                    if (temp.TryGetValue("userId", out String matchUser))
-                    {
-                        if (matchUser == userId)
-                        {
-                            matchRef = document;
-                            match = temp;
-                            valid = true;
-                            break;
-                        }
-                    }
-                }
+                TempData["AlertDanger"] = "Match selected for deletion was not found.";
+                return RedirectToPage("/Interface");
             }
 
-            if (!valid)
-            {
-                TempData["AlertDanger"] = "Requested match does not belong to this user.";
-                return Redirect("/Interface");
-            }
-
-            TempData["matchId"] = matchId;
-            CollectionReference seriesRef = matchRef.Collection("series");
-            IAsyncEnumerable<DocumentReference> seriesRefs =
-                seriesRef.ListDocumentsAsync();
-
-            await foreach (DocumentReference document in seriesRefs)
-            {
-                await document.DeleteAsync();
-            }
-
-            await matchRef.DeleteAsync();
-            TempData["AlertSuccess"] = "Match deleted";
-            return Redirect("/Interface");
+            TempData["AlertDanger"] = "Something went wrong. Please try again.";
+            return RedirectToPage("/Interface");
         }
+
+        public DeleteMatch(IHttpClientFactory httpClientFactory)
+            => _httpClientFactory = httpClientFactory;
     }
 }

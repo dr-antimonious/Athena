@@ -1,102 +1,84 @@
-using System.Net.Mail;
+using System.ComponentModel.DataAnnotations;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-using Google.Cloud.Firestore;
+using Artemis.Contracts.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Newtonsoft.Json;
 
 namespace ShootingWebsite.Pages
 {
     public class Register : PageModel
     {
+        private readonly IHttpClientFactory _httpClientFactory;
+
+        [BindProperty]
+        public UserRequestBaseDto UserRequest { get; set; }
+
+        [Required(ErrorMessage = ConstStrings.PasswordRequired)]
+        [RegularExpression(@"^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{10,}$",
+            ErrorMessage = ConstStrings.PasswordRegEx)]
+        public string Password { get; set; }
+
         public void OnGet()
         {
         }
 
-        public async Task<RedirectResult?> OnPostAsync()
+        public async Task<IActionResult?> OnPostAsync()
         {
-            FirestoreDb db = FirestoreDb.Create("shootingdiary-orwima");
+            UserRequest.FirstName = Request.Form["UserRequest.FirstName"].ToString();
+            UserRequest.AdditionalNames = Request.Form["UserRequest.AdditionalNames"].ToString();
+            UserRequest.LastName = Request.Form["UserRequest.LastName"].ToString();
+            UserRequest.DateOfBirth = DateTime.Parse(Request.Form["UserRequest.DateOfBirth"].ToString());
+            UserRequest.Gender = Request.Form["UserRequest.Gender"].ToString()[0];
+            UserRequest.PhoneNumber = Request.Form["UserRequest.PhoneNumber"].ToString();
+            UserRequest.Email = Request.Form["UserRequest.Email"].ToString();
+            Password = Request.Form["Password"].ToString();
 
-            CollectionReference collection = db.Collection("users");
-            IAsyncEnumerable<DocumentReference> documentRefs = 
-                collection.ListDocumentsAsync();
-            List<DocumentSnapshot> documents = new ();
-
-            await foreach (DocumentReference document in documentRefs)
+            ModelState.ClearValidationState(nameof(Register));
+            if (!TryValidateModel(nameof(Register)))
             {
-                DocumentSnapshot temp = await document.GetSnapshotAsync();
-                documents.Add(temp);
+                return Page();
             }
 
-            if (String.IsNullOrWhiteSpace(Request.Form["username"].ToString()))
+            var request = new HttpRequestMessage(HttpMethod.Post,
+                "http://172.19.0.3:80/artemis/auth/register");
+            var client = _httpClientFactory.CreateClient();
+
+            RegistrationRequestDto registrationRequest = new(UserRequest)
             {
-                TempData["AlertDanger"] = "Please enter a username";
-                return null;
+                PasswordHash = Convert.ToHexString(
+                        SHA512.HashData(
+                            Encoding.Default.GetBytes(Password)))
+                    .ToLower()
+            };
+
+            var json = JsonConvert.SerializeObject(registrationRequest);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Content = content;
+            HttpResponseMessage response = await client.SendAsync(request);
+
+            if (response.StatusCode.Equals(HttpStatusCode.Conflict))
+            {
+                TempData["AlertDanger"] = "User with entered e-mail already exists.";
+                return Page();
             }
 
-            foreach (DocumentSnapshot document in documents)
+            if (response.StatusCode.Equals(HttpStatusCode.Created))
             {
-                document.TryGetValue("username", out String user);
-                if (user == Request.Form["username"].ToString())
-                {
-                    TempData["AlertDanger"] = "Username is already in use";
-                    return null;
-                }
+                TempData["AlertSuccess"] = "Successfully registered. Please log in.";
+                return RedirectToPage("/Login");
             }
 
-            TempData["username"] = Request.Form["username"].ToString();
+            TempData["AlertDanger"] = "Something went wrong. Please try again.";
+            return Page();
+        }
 
-            if (String.IsNullOrWhiteSpace(Request.Form["email"].ToString()))
-            {
-                TempData["AlertDanger"] = "Please enter a valid e-mail address";
-                return null;
-            }
-
-            try
-            {
-                var testEmail = new MailAddress(Request.Form["email"].ToString());
-            }
-            catch (Exception ex)
-            {
-                TempData["AlertDanger"] = "Please enter a valid e-mail address";
-                return null;
-            }
-
-            foreach (DocumentSnapshot document in documents)
-            {
-                document.TryGetValue("email", out String user);
-                if (user == Request.Form["email"].ToString())
-                {
-                    TempData["AlertDanger"] = "E-mail address is already in use";
-                    return null;
-                }
-            }
-
-            TempData["email"] = Request.Form["email"].ToString();
-
-            if (String.IsNullOrWhiteSpace(Request.Form["password"].ToString()))
-            {
-                TempData["AlertDanger"] = "Please enter a password";
-                return null;
-            }
-
-            byte[] encryptedPassword = SHA512.HashData(
-                Encoding.Default.GetBytes(Request.Form["password"].ToString()));
-
-            String encrypted = Convert.ToHexString(encryptedPassword).ToLower();
-
-            DocumentReference newUserRef = await collection.AddAsync(new
-            {
-                username = Request.Form["username"].ToString(),
-                email = Request.Form["email"].ToString(),
-                password = encrypted
-            });
-
-            DocumentSnapshot newUser = await newUserRef.GetSnapshotAsync();
-
-            TempData["AlertSuccess"] = "User successfully created";
-            Response.Cookies.Append("userId", newUser.Id);
-            return Redirect("/Interface");
+        public Register(IHttpClientFactory httpClientFactory)
+        {
+            _httpClientFactory = httpClientFactory;
+            UserRequest = new UserRequestBaseDto();
         }
     }
 }

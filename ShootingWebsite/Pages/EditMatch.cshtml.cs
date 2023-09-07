@@ -1,341 +1,349 @@
-using Google.Cloud.Firestore;
+using System.ComponentModel.DataAnnotations;
+using System.Net.Http.Headers;
+using System.Net;
+using Artemis.Contracts.DTOs;
+using Artemis.Contracts.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
+using System.Text;
+using Artemis.Contracts.Entities.Matches;
 
 namespace ShootingWebsite.Pages
 {
     public class EditMatch : PageModel
     {
-        public List<Dictionary<String, String>> series = new List<Dictionary<String, String>>();
-        public async Task<RedirectResult?> OnGet([FromQuery] String matchId)
+        private readonly IHttpClientFactory _httpClientFactory;
+
+        [BindProperty]
+        public MatchUpdateRequestDto MatchUpdateRequest { get; set; }
+
+        [Required(ErrorMessage = "Start time is required.")]
+        public Timestamp StartTimestamp { get; set; }
+
+        [Required(ErrorMessage = "End time is required.")]
+        public Timestamp EndTimestamp { get; set; }
+
+        public DateTime Date { get; set; }
+
+        public DateTime StartTime { get; set; }
+
+        public DateTime EndTime { get; set; }
+
+        [Required(ErrorMessage = "Country is required.")]
+        public Country Country { get; set; }
+
+        [Required(ErrorMessage = "City is required.")]
+        public City City { get; set; }
+
+        [Required(ErrorMessage = "Location is required.")]
+        public Location Location { get; set; }
+
+        public async Task<IActionResult?> OnGet([FromQuery] string matchId)
         {
-            TempData.Clear();
-
-            bool valid = false;
-            DocumentSnapshot? user = null;
-            DocumentSnapshot? match = null;
-            DocumentReference? matchRef = null;
-            FirestoreDb db = FirestoreDb.Create("shootingdiary-orwima");
-
-            if (Request.Cookies.TryGetValue("userId", out String? userId))
+            if (!Request.Cookies.TryGetValue("Bearer", out string? bearerToken))
             {
-                if (String.IsNullOrWhiteSpace(userId))
-                {
-                    TempData["AlertDanger"] = "You are not logged in. Please log in or register.";
-                    return Redirect("/Index");
-                }
-
-                CollectionReference collection = db.Collection("users");
-                IAsyncEnumerable<DocumentReference> documentRefs =
-                    collection.ListDocumentsAsync();
-
-                await foreach (DocumentReference document in documentRefs)
-                {
-                    DocumentSnapshot temp = await document.GetSnapshotAsync();
-                    if (temp.Id == userId)
-                    {
-                        user = temp;
-                        valid = true;
-                        break;
-                    }
-                }
+                TempData["AlertDanger"] = "You are not logged in.";
+                return RedirectToPage("/Index");
             }
 
-            else
+            if (matchId.IsNullOrEmpty())
             {
-                TempData["AlertDanger"] = "You are not logged in. Please log in or register.";
-                return Redirect("/Index");
+                TempData["AlertDanger"] = "No ID provided for match edit.";
+                return RedirectToPage("/Interface");
             }
 
-            if (!valid)
+            var request = new HttpRequestMessage(HttpMethod.Get,
+                $"http://172.19.0.3:80/artemis/data/match/get/by-id?id={matchId}");
+            var client = _httpClientFactory.CreateClient();
+            var header = new AuthenticationHeaderValue("Bearer", bearerToken);
+            request.Headers.Authorization = header;
+            HttpResponseMessage response = await client.SendAsync(request);
+
+            if (response.StatusCode.Equals(HttpStatusCode.NotFound))
             {
-                TempData["AlertDanger"] = "Incorrect userId found in cookies. Please login or register.";
-                return Redirect("/Logout");
+                TempData["AlertDanger"] = "Match not found.";
+                return RedirectToPage("/Interface");
             }
 
-            if (String.IsNullOrWhiteSpace(matchId))
-                return null;
-
-            CollectionReference matchesRef = db.Collection("matches");
-            IAsyncEnumerable<DocumentReference> matchRefs =
-                matchesRef.ListDocumentsAsync();
-            valid = false;
-
-            await foreach (DocumentReference document in matchRefs)
+            if (response.StatusCode.Equals(HttpStatusCode.Unauthorized))
             {
-                DocumentSnapshot temp = await document.GetSnapshotAsync();
-                if (temp.Id == matchId)
-                {
-                    if (temp.TryGetValue("userId", out String matchUser))
-                    {
-                        if (matchUser == userId)
-                        {
-                            matchRef = document;
-                            match = temp;
-                            valid = true;
-                            break;
-                        }
-                    }
-                }
+                TempData["AlertDanger"] = "You are not logged in.";
+                Response.Cookies.Delete("Bearer");
+                return RedirectToPage("/Index");
             }
 
-            if (!valid)
+            if (response.StatusCode.Equals(HttpStatusCode.OK))
             {
-                TempData["AlertDanger"] = "Requested match does not belong to this user.";
-                return Redirect("/Interface");
-            }
-            
-            TempData["matchId"] = matchId;
-
-            match.TryGetValue("AirPressure", out int airPressure);
-            TempData["airPressure"] = airPressure.ToString();
-
-            match.TryGetValue("Date", out String date);
-            TempData["date"] = date;
-
-            match.TryGetValue("EndTime", out String endTime);
-            TempData["endTime"] = endTime;
-
-            match.TryGetValue("Humidity", out int humidity);
-            TempData["humidity"] = humidity.ToString();
-
-            match.TryGetValue("Inner10s", out int inner10s);
-            TempData["inner10s"] = inner10s.ToString();
-
-            match.TryGetValue("Location", out String location);
-            TempData["location"] = location;
-
-            match.TryGetValue("Mood", out String mood);
-            TempData["mood"] = mood;
-
-            match.TryGetValue("Notes", out String notes);
-            TempData["notes"] = notes;
-
-            match.TryGetValue("Result", out int result);
-            TempData["result"] = result.ToString();
-
-            match.TryGetValue("StartTime", out String startTime);
-            TempData["startTime"] = startTime;
-
-            match.TryGetValue("Temperature", out int temperature);
-            TempData["temperature"] = temperature.ToString();
-
-            CollectionReference seriesRef = matchRef.Collection("series");
-            IAsyncEnumerable<DocumentReference> seriesRefs =
-                seriesRef.ListDocumentsAsync();
-
-            int i = 1;
-            await foreach (DocumentReference document in seriesRefs)
-            {
-                DocumentSnapshot temp = await document.GetSnapshotAsync();
-                temp.TryGetValue("Decimal", out Double dec);
-                temp.TryGetValue("EndTime", out String seriesEndTime);
-                temp.TryGetValue("Inner10s", out int seriesInner10s);
-                temp.TryGetValue("Notes", out String seriesNotes);
-                temp.TryGetValue("Result", out int seriesResult);
-                temp.TryGetValue("StartTime", out String seriesStartTime);
-
-                TempData[$"decimal-{i}"] = dec.ToString();
-                TempData[$"endTime-{i}"] = seriesEndTime;
-                TempData[$"inner10s-{i}"] = seriesInner10s.ToString();
-                TempData[$"notes-{i}"] = seriesNotes;
-                TempData[$"result-{i}"] = seriesResult.ToString();
-                TempData[$"startTime-{i}"] = seriesStartTime;
-
-                i++;
+                MatchOutputDto dto = response.Content.ReadFromJsonAsync<MatchOutputDto>().Result!;
+                MatchUpdateRequest = new(dto);
+                StartTimestamp = dto.StartTimestamp;
+                EndTimestamp = dto.EndTimestamp;
+                Date = StartTimestamp.TimeStamp.Date;
+                StartTime = StartTimestamp.TimeStamp;
+                EndTime = EndTimestamp.TimeStamp;
+                Location = dto.Location;
+                City = Location.City;
+                Country = Location.Country;
+                MatchUpdateRequest.Shots = MatchUpdateRequest.Shots.OrderBy(x => x.Position).ToList();
+                return Page();
             }
 
-            return null;
+            TempData["AlertDanger"] = "Something went wrong. Please try again later.";
+            return RedirectToPage("/Interface");
         }
 
-        public async Task<RedirectResult?> OnPost([FromQuery] String matchId)
+        public async Task<IActionResult?> OnPost([FromQuery] string matchId)
         {
-            List<string> checkStrings = new List<string>
+            if (!Request.Cookies.TryGetValue("Bearer", out string? bearerToken))
             {
-                Request.Form["date"].ToString(),
-                Request.Form["startTime"].ToString(),
-                Request.Form["endTime"].ToString(),
-                Request.Form["location"].ToString(),
-                Request.Form["result"].ToString(),
-                Request.Form["inner10s"].ToString(),
-                Request.Form["temperature"].ToString(),
-                Request.Form["humidity"].ToString(),
-                Request.Form["airPressure"].ToString(),
-                Request.Form["mood"].ToString()
-            };
-
-            TempData["date"] = Request.Form["date"].ToString();
-            TempData["startTime"] = Request.Form["startTime"].ToString();
-            TempData["endTime"] = Request.Form["endTime"].ToString();
-            TempData["location"] = Request.Form["location"].ToString();
-            TempData["result"] = Request.Form["result"].ToString();
-            TempData["inner10s"] = Request.Form["inner10s"].ToString();
-            TempData["temperature"] = Request.Form["temperature"].ToString();
-            TempData["humidity"] = Request.Form["humidity"].ToString();
-            TempData["airPressure"] = Request.Form["airPressure"].ToString();
-            TempData["mood"] = Request.Form["mood"].ToString();
-            TempData["notes"] = Request.Form["notes"].ToString();
-
-            List<string> checkResults = new List<string>();
-            List<string> checkDecimals = new List<string>();
-            List<string> checkInners = new List<string>();
-
-            for (int i = 1; i < 7; i++)
-            {
-                checkStrings.Add(Request.Form[$"startTime-{i}"].ToString());
-                checkStrings.Add(Request.Form[$"endTime-{i}"].ToString());
-                checkStrings.Add(Request.Form[$"result-{i}"].ToString());
-                checkResults.Add(Request.Form[$"result-{i}"].ToString());
-                checkStrings.Add(Request.Form[$"decimal-{i}"].ToString());
-                checkDecimals.Add(Request.Form[$"decimal-{i}"].ToString());
-                checkStrings.Add(Request.Form[$"inner10s-{i}"].ToString());
-                checkInners.Add(Request.Form[$"inner10s-{i}"].ToString());
-                TempData[$"startTime-{i}"] = Request.Form[$"startTime-{i}"].ToString();
-                TempData[$"endTime-{i}"] = Request.Form[$"endTime-{i}"].ToString();
-                TempData[$"result-{i}"] = Request.Form[$"result-{i}"].ToString();
-                TempData[$"decimal-{i}"] = Request.Form[$"decimal-{i}"].ToString();
-                TempData[$"inner10s-{i}"] = Request.Form[$"inner10s-{i}"].ToString();
-                TempData[$"notes-{i}"] = Request.Form[$"notes-{i}"].ToString();
+                TempData["AlertDanger"] = "You are not logged in.";
+                return RedirectToPage("/Index");
             }
 
-            foreach (string checkString in checkStrings)
+            if (matchId.IsNullOrEmpty())
             {
-                if (String.IsNullOrWhiteSpace(checkString))
+                TempData["AlertDanger"] = "No ID provided for match edit.";
+                return RedirectToPage("/Interface");
+            }
+
+            var request = new HttpRequestMessage(HttpMethod.Get,
+                $"http://172.19.0.3:80/artemis/data/match/get/by-id?id={matchId}");
+            var client = _httpClientFactory.CreateClient();
+            var header = new AuthenticationHeaderValue("Bearer", bearerToken);
+            request.Headers.Authorization = header;
+            HttpResponseMessage response = await client.SendAsync(request);
+
+            if (response.StatusCode.Equals(HttpStatusCode.NotFound))
+            {
+                TempData["AlertDanger"] = "Match not found.";
+                return RedirectToPage("/Interface");
+            }
+
+            if (response.StatusCode.Equals(HttpStatusCode.Unauthorized))
+            {
+                TempData["AlertDanger"] = "You are not logged in.";
+                Response.Cookies.Delete("Bearer");
+                return RedirectToPage("/Index");
+            }
+
+            if (response.StatusCode.Equals(HttpStatusCode.OK))
+            {
+                MatchOutputDto dto = response.Content.ReadFromJsonAsync<MatchOutputDto>().Result!;
+                MatchUpdateRequest = new(dto);
+
+                Date = DateTime.Parse(Request.Form["Date"].ToString());
+
+                StartTime = DateTime.Parse(Request.Form["StartTime"].ToString());
+                DateTime start = new(Date.Date.Year, Date.Date.Month, Date.Date.Day,
+                    StartTime.Hour, StartTime.Minute, 0);
+                request = new HttpRequestMessage(HttpMethod.Post,
+                    "http://172.19.0.3:80/artemis/data/timestamp/add");
+                request.Headers.Authorization = new("Bearer", bearerToken);
+                var json = JsonConvert.SerializeObject(start);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                request.Content = content;
+                response = await client.SendAsync(request);
+                if (!response.StatusCode.Equals(HttpStatusCode.Conflict)
+                    && !response.StatusCode.Equals(HttpStatusCode.Created))
                 {
-                    TempData["AlertDanger"] = "All fields (except for notes) must contain a value";
-                    return null;
+                    TempData["AlertDanger"] = "Something went wrong. Please try again.";
+                    return Page();
                 }
-            }
+                MatchUpdateRequest.StartTimestampId = response.Content.ReadFromJsonAsync<Timestamp>().Result!.Id;
 
-            foreach (string res in checkResults)
-            {
-                int temp = int.Parse(res);
-                if (temp < 0 || temp > 100)
+                EndTime = DateTime.Parse(Request.Form["EndTime"].ToString());
+                DateTime end = new(Date.Date.Year, Date.Date.Month, Date.Date.Day,
+                    EndTime.Hour, EndTime.Minute, 0);
+                request = new HttpRequestMessage(HttpMethod.Post,
+                    "http://172.19.0.3:80/artemis/data/timestamp/add");
+                request.Headers.Authorization = new("Bearer", bearerToken);
+                json = JsonConvert.SerializeObject(end);
+                content = new StringContent(json, Encoding.UTF8, "application/json");
+                request.Content = content;
+                response = await client.SendAsync(request);
+                if (!response.StatusCode.Equals(HttpStatusCode.Conflict)
+                    && !response.StatusCode.Equals(HttpStatusCode.Created))
                 {
-                    TempData["AlertDanger"] = "Series result must be between 0 and 100 (border inclusive)";
-                    return null;
+                    TempData["AlertDanger"] = "Something went wrong. Please try again.";
+                    return Page();
                 }
-            }
+                MatchUpdateRequest.EndTimestampId = response.Content.ReadFromJsonAsync<Timestamp>().Result!.Id;
 
-            foreach (string dec in checkDecimals)
-            {
-                Double temp = Double.Parse(dec);
-                if (temp < 0 || temp > 109)
+                string CountryName = Request.Form["Country.Name"].ToString();
+                request = new HttpRequestMessage(HttpMethod.Post,
+                    $"http://172.19.0.3:80/artemis/data/country/add");
+                request.Headers.Authorization = new("Bearer", bearerToken);
+                json = JsonConvert.SerializeObject(CountryName);
+                content = new StringContent(json, Encoding.UTF8, "application/json");
+                request.Content = content;
+                response = await client.SendAsync(request);
+                if (!response.StatusCode.Equals(HttpStatusCode.Conflict)
+                    && !response.StatusCode.Equals(HttpStatusCode.Created))
                 {
-                    TempData["AlertDanger"] = "Decimal series result must be between 0 and 109 (border inclusive)";
-                    return null;
+                    TempData["AlertDanger"] = "Something went wrong. Please try again.";
+                    return Page();
                 }
-            }
+                Country country = response.Content.ReadFromJsonAsync<Country>().Result!;
 
-            foreach (string inners in checkInners)
-            {
-                int temp = int.Parse(inners);
-                if (temp < 0 || temp > 10)
+                CityCreateRequestDto cityRequest = new()
                 {
-                    TempData["AlertDanger"] =
-                        "Number of inner 10s in a series must be between 0 and 10 (border inclusive)";
-                    return null;
+                    Name = Request.Form["City.Name"].ToString(),
+                    Id = country.Id
+                };
+                request = new HttpRequestMessage(HttpMethod.Post,
+                    $"http://172.19.0.3:80/artemis/data/city/add");
+                request.Headers.Authorization = new("Bearer", bearerToken);
+                json = JsonConvert.SerializeObject(cityRequest);
+                content = new StringContent(json, Encoding.UTF8, "application/json");
+                request.Content = content;
+                response = await client.SendAsync(request);
+                if (!response.StatusCode.Equals(HttpStatusCode.Conflict)
+                    && !response.StatusCode.Equals(HttpStatusCode.Created))
+                {
+                    TempData["AlertDanger"] = "Something went wrong. Please try again.";
+                    return Page();
                 }
-            }
+                City city = response.Content.ReadFromJsonAsync<City>().Result!;
 
-            int result = int.Parse(Request.Form["result"].ToString());
-            if (result < 0 || result > 600)
-            {
-                TempData["AlertDanger"] = "Match result must be between 0 and 600 (border inclusive)";
-                return null;
-            }
-
-            int inner10s = int.Parse(Request.Form["inner10s"].ToString());
-            if (inner10s < 0 || inner10s > 60)
-            {
-                TempData["AlertDanger"] = "Number of inner 10s in a match must be between 0 and 60 (border inclusive)";
-                return null;
-            }
-
-            int humidity = int.Parse(Request.Form["humidity"].ToString());
-            if (humidity < 0 || humidity > 100)
-            {
-                TempData["AlertDanger"] = "Humidity must be between 0 and 100 (border inclusive)";
-                return null;
-            }
-
-            int airPressure = int.Parse(Request.Form["airPressure"].ToString());
-            if (airPressure < 0)
-            {
-                TempData["AlertDanger"] = "Air pressure must be a non-negative number";
-                return null;
-            }
-
-            string date = Request.Form["date"].ToString();
-            string startTime = Request.Form["startTime"].ToString();
-            string endTime = Request.Form["endTime"].ToString();
-            string location = Request.Form["location"].ToString();
-            string mood = Request.Form["mood"].ToString();
-            string notes = Request.Form["notes"].ToString();
-            string? userId = Request.Cookies["userId"]?.ToString();
-
-            List<Dictionary<string, object>> seriesList = new List<Dictionary<string, object>>();
-            for (int i = 1; i < 7; i++)
-            {
-                seriesList.Add(new Dictionary<string, object>
+                LocationCreateRequestDto locationRequest = new();
+                locationRequest.CityId = city.Id;
+                locationRequest.CountryId = country.Id;
+                locationRequest.Name = Request.Form["Location.Name"].ToString();
+                request = new HttpRequestMessage(HttpMethod.Post,
+                    $"http://172.19.0.3:80/artemis/data/location/add");
+                request.Headers.Authorization = new("Bearer", bearerToken);
+                json = JsonConvert.SerializeObject(locationRequest);
+                content = new StringContent(json, Encoding.UTF8, "application/json");
+                request.Content = content;
+                response = await client.SendAsync(request);
+                if (!response.StatusCode.Equals(HttpStatusCode.Conflict)
+                    && !response.StatusCode.Equals(HttpStatusCode.Created))
                 {
-                    {"StartTime", Request.Form[$"startTime-{i}"].ToString()},
-                    {"EndTime", Request.Form[$"endTime-{i}"].ToString()},
-                    {"Inner10s", int.Parse(Request.Form[$"inner10s-{i}"].ToString())},
-                    {"Result", int.Parse(Request.Form[$"result-{i}"].ToString())},
-                    {"Decimal", Double.Parse(Request.Form[$"decimal-{i}"].ToString())},
-                    {"Notes", Request.Form[$"notes-{i}"].ToString()}
-                });
-            }
+                    TempData["AlertDanger"] = "Something went wrong. Please try again.";
+                    return Page();
+                }
+                MatchUpdateRequest.LocationId = response.Content.ReadFromJsonAsync<Location>().Result!.Id;
 
-            Dictionary<string, object> newMatch = new Dictionary<string, object>
-            {
-                {"userId", userId},
-                {"Notes", notes},
-                {"Mood", mood},
-                {"Location", location},
-                {"EndTime", endTime},
-                {"StartTime", startTime},
-                {"Date", date},
-                {"Humidity", humidity},
-                {"Temperature", int.Parse(Request.Form["temperature"].ToString())},
-                {"Result", result},
-                {"Inner10s", inner10s},
-                {"AirPressure", airPressure}
-            };
+                MatchUpdateRequest.AirTemperature =
+                    !Request.Form["MatchUpdateRequest.AirTemperature"].ToString().IsNullOrEmpty()
+                        ? double.Parse(Request.Form["MatchUpdateRequest.AirTemperature"].ToString())
+                        : null;
+                MatchUpdateRequest.AirPressure =
+                    !Request.Form["MatchUpdateRequest.AirPressure"].ToString().IsNullOrEmpty()
+                        ? double.Parse(Request.Form["MatchUpdateRequest.AirPressure"].ToString())
+                        : null;
+                MatchUpdateRequest.WindSpeed =
+                    !Request.Form["MatchUpdateRequest.WindSpeed"].ToString().IsNullOrEmpty()
+                        ? double.Parse(Request.Form["MatchUpdateRequest.WindSpeed"].ToString())
+                        : null;
+                MatchUpdateRequest.WindDirection =
+                    !Request.Form["MatchUpdateRequest.WindDirection"].ToString().Contains('X')
+                        ? Request.Form["MatchUpdateRequest.WindDirection"].ToString()
+                        : null;
+                MatchUpdateRequest.EnvironmentNotes =
+                    !Request.Form["MatchUpdateRequest.EnvironmentNotes"].ToString().IsNullOrEmpty()
+                        ? Request.Form["MatchUpdateRequest.EnvironmentNotes"].ToString()
+                        : null;
+                MatchUpdateRequest.EquipmentNotes =
+                    !Request.Form["MatchUpdateRequest.EquipmentNotes"].ToString().IsNullOrEmpty()
+                        ? Request.Form["MatchUpdateRequest.EquipmentNotes"].ToString()
+                        : null;
+                MatchUpdateRequest.ShooterNotes =
+                    !Request.Form["MatchUpdateRequest.ShooterNotes"].ToString().IsNullOrEmpty()
+                        ? Request.Form["MatchUpdateRequest.ShooterNotes"].ToString()
+                        : null;
 
-            FirestoreDb db = FirestoreDb.Create("shootingdiary-orwima");
-            CollectionReference matches = db.Collection("matches");
+                List<double> shotVals = new();
+                for (int i = 0; i < MatchUpdateRequest.Shots.Count; i++)
+                    shotVals.Add(double.Parse(Request.Form[$"MatchUpdateRequest.Shots[{i}].Value"].ToString()));
 
-            if (String.IsNullOrWhiteSpace(matchId))
-            {
-                DocumentReference newMatchRef = await matches.AddAsync(newMatch);
-                CollectionReference newSeriesCollectionRef = newMatchRef.Collection("series");
+                List<Timestamp?> shotTimestamp = new();
+                List<double?> shotHorizontal = new();
+                List<double?> shotVertical = new();
 
-                for (int i = 1; i < 7; i++)
+                if (!MatchUpdateRequest.Type.Equals("TS"))
                 {
-                    DocumentReference newSeriesRef = newSeriesCollectionRef.Document(i.ToString());
-                    await newSeriesRef.CreateAsync(seriesList[i - 1]);
+                    for (int i = 0; i < MatchUpdateRequest.Shots.Count; i++)
+                    {
+                        string temp = Request.Form[$"MatchUpdateRequest.Shots[{i}].Timestamp"].ToString();
+
+                        if (!temp.IsNullOrEmpty())
+                        {
+                            DateTime stamp = DateTime.Parse(temp!);
+                            request = new HttpRequestMessage(HttpMethod.Post,
+                                "http://172.19.0.3:80/artemis/data/timestamp/add");
+                            request.Headers.Authorization = new("Bearer", bearerToken);
+                            json = JsonConvert.SerializeObject(stamp);
+                            content = new StringContent(json, Encoding.UTF8, "application/json");
+                            request.Content = content;
+                            response = await client.SendAsync(request);
+                            if (!response.StatusCode.Equals(HttpStatusCode.Conflict)
+                                && !response.StatusCode.Equals(HttpStatusCode.Created))
+                            {
+                                TempData["AlertDanger"] = "Something went wrong. Please try again.";
+                                return Page();
+                            }
+                            shotTimestamp.Add(response.Content.ReadFromJsonAsync<Timestamp>().Result);
+                        }
+                        else shotTimestamp.Add(null);
+
+                        temp = Request.Form[$"MatchUpdateRequest.Shots[{i}].HorizontalDisplacement"].ToString();
+
+                        if (!temp.IsNullOrEmpty()) shotHorizontal.Add(double.Parse(temp!));
+                        else shotHorizontal.Add(null);
+
+                        temp = Request.Form[$"MatchUpdateRequest.Shots[{i}].VerticalDisplacement"].ToString();
+
+                        if (!temp.IsNullOrEmpty()) shotVertical.Add(double.Parse(temp!));
+                        else shotVertical.Add(null);
+                    }
                 }
 
-                DocumentSnapshot newMatchSnap = await newMatchRef.GetSnapshotAsync();
-                TempData["AlertSuccess"] = "Match saved";
-                return Redirect($"/MatchDetails?matchId={newMatchSnap.Id}");
+                for (int i = 0; i < MatchUpdateRequest.Shots.Count; i++)
+                {
+                    MatchUpdateRequest.Shots[i].Value = shotVals[i];
+
+                    if (!MatchUpdateRequest.Type.Equals("TS"))
+                    {
+                        MatchUpdateRequest.Shots[i].Timestamp = shotTimestamp[i];
+                        MatchUpdateRequest.Shots[i].HorizontalDisplacement = shotHorizontal[i];
+                        MatchUpdateRequest.Shots[i].VerticalDisplacement = shotVertical[i];
+                    }
+                }
+
+                request = new HttpRequestMessage(HttpMethod.Post,
+                    "http://172.19.0.3:80/artemis/data/match/update");
+                request.Headers.Authorization = new("Bearer", bearerToken);
+                json = JsonConvert.SerializeObject(MatchUpdateRequest);
+                content = new StringContent(json, Encoding.UTF8, "application/json");
+                request.Content = content;
+                response = await client.SendAsync(request);
+                if (response.StatusCode.Equals(HttpStatusCode.Unauthorized))
+                {
+                    TempData["AlertDanger"] = "You are not logged in.";
+                    Response.Cookies.Delete("Bearer");
+                    return RedirectToPage("/Index");
+                }
+
+                if (!response.StatusCode.Equals(HttpStatusCode.Created))
+                {
+                    TempData["AlertDanger"] = "Something went wrong. Please try again.";
+                    return Page();
+                }
+
+                TempData["AlertSuccess"] = "Changes applied.";
+                return RedirectToPage("/Interface");
             }
 
-            DocumentReference matchRef = matches.Document(matchId);
-            await matchRef.UpdateAsync(newMatch);
+            TempData["AlertDanger"] = "Something went wrong. Please try again later.";
+            return RedirectToPage("/Interface");
+        }
 
-            CollectionReference seriesCollectionRef = matchRef.Collection("series");
-
-            for (int i = 1; i < 7; i++)
-            {
-                DocumentReference newSeriesRef = seriesCollectionRef.Document(i.ToString());
-                await newSeriesRef.UpdateAsync(seriesList[i - 1]);
-            }
-
-            TempData["AlertSuccess"] = "Match updated";
-            return Redirect($"/MatchDetails?matchId={matchId}");
+        public EditMatch(IHttpClientFactory httpClientFactory)
+        {
+            _httpClientFactory = httpClientFactory;
         }
     }
 }

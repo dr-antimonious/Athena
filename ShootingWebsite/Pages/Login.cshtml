@@ -16,13 +16,14 @@
                 <br />
                 <div class="d-flex justify-content-center text-start">
                     <form method="post">
-                        <label for="email" class="form-label text-white">e-mail address</label>
-                        <input asp-for="@Model.email" name="email" id="email" type="email" class="form-control" placeholder="user@example.com" value="@TempData["email"]"/>
-                        <span asp-validation-for="@Model.email" class="Error"></span>
-                        <br />
-                        <label for="password" class="form-label text-white">password</label>
-                        <input name="password" id="password" type="password" class="form-control" placeholder="password"/>
-                        <br />
+                        <label for="@Model.email" class="form-label text-white">e-mail address</label>
+                        <input asp-for="@Model.email" type="email" class="form-control" placeholder="user@example.com" value="@Model.email"/>
+                        <span asp-validation-for="@Model.email" class="text-white"></span>
+                        <br/>
+                        <label for="@Model.password" class="form-label text-white">password</label>
+                        <input asp-for="@Model.password" type="password" class="form-control" placeholder="password" value="@Model.password"/>
+                        <span asp-validation-for="@Model.password" class="text-white"></span>
+                        <br/>
                         <button type="submit" class="btn btn-dark">login</button>
                     </form>
                 </div>
@@ -45,4 +46,14 @@
     .itembackdrop {
         backdrop-filter: blur(25px) brightness(75%);
     }
+
+    span {
+        display:block;
+        max-width:20em;
+        word-break:normal;
+    }
 </style>
+
+@section scripts{
+    <partial name="Shared/_ValidationScriptsPartial"/>
+}

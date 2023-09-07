@@ -9,9 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Cloud.Firestore" Version="3.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.10" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.17.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="../Artemis.Contracts/Artemis.Contracts.csproj"></ProjectReference>
+	</ItemGroup>
 
 </Project>

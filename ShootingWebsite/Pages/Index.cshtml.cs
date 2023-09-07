@@ -13,10 +13,10 @@ namespace ShootingWebsite.Pages
             if (Request.Cookies.TryGetValue("Bearer", out string? bearerToken))
             {
                 var request = new HttpRequestMessage(HttpMethod.Get,
-                    "http://162.0.233.165:5001/artemis/auth/get/by-id");
+                    "http://172.19.0.3:80/artemis/auth/get-user/by-id");
                 var client = _httpClientFactory.CreateClient();
                 request.Headers.Authorization = new("Bearer", bearerToken);
-                HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                HttpResponseMessage response = await client.SendAsync(request);
                 if (response.StatusCode.Equals(HttpStatusCode.OK))
                 {
                     return RedirectToPage("/Interface");

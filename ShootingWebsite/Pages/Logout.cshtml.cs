@@ -7,7 +7,7 @@ namespace ShootingWebsite.Pages
     {
         public RedirectResult OnGet()
         {
-            Response.Cookies.Append("userId", String.Empty);
+            Response.Cookies.Delete("Bearer");
             return Redirect("/Index");
         }
     }

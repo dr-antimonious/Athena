@@ -1,111 +1,134 @@
-using Google.Cloud.Firestore;
+using System.Net;
+using System.Net.Http.Headers;
+using Artemis.Contracts.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Newtonsoft.Json;
+using Microsoft.IdentityModel.Tokens;
 
 namespace ShootingWebsite.Pages
 {
     public class Interface : PageModel
     {
-        public List<Dictionary<String, String>> matchList = new List<Dictionary<string, string>>();
-        public async Task<RedirectResult?> OnGet()
+        public List<MatchOutputDto> matches;
+
+        public UserDto user;
+
+        private readonly IHttpClientFactory _httpClientFactory;
+
+        public async Task<IActionResult?> OnGet()
         {
-            bool valid = false;
-            DocumentSnapshot? user = null;
-            FirestoreDb db = FirestoreDb.Create("shootingdiary-orwima");
-
-            if (Request.Cookies.TryGetValue("userId", out String? userId))
+            if (Request.Cookies.TryGetValue("Bearer", out string? bearerToken))
             {
-                if (String.IsNullOrWhiteSpace(userId))
+                var request = new HttpRequestMessage(HttpMethod.Get,
+                    "http://172.19.0.3:80/artemis/auth/get-user/by-id");
+                var client = _httpClientFactory.CreateClient();
+                var header = new AuthenticationHeaderValue("Bearer", bearerToken);
+                request.Headers.Authorization = header;
+                HttpResponseMessage response = await client.SendAsync(request,
+                    HttpCompletionOption.ResponseHeadersRead);
+                
+                if (response.StatusCode.Equals(HttpStatusCode.Unauthorized))
                 {
-                    TempData["AlertDanger"] = "You are not logged in. Please log in or register.";
-                    return Redirect("/Index");
+                    TempData["AlertDanger"] = "You are not logged in.";
+                    Response.Cookies.Delete("Bearer");
+                    return RedirectToPage("/Index");
                 }
 
-                CollectionReference collection = db.Collection("users");
-                IAsyncEnumerable<DocumentReference> documentRefs =
-                    collection.ListDocumentsAsync();
-
-                await foreach (DocumentReference document in documentRefs)
+                if (response.StatusCode.Equals(HttpStatusCode.NotFound))
                 {
-                    DocumentSnapshot temp = await document.GetSnapshotAsync();
-                    if (temp.Id == userId)
-                    {
-                        user = temp;
-                        valid = true;
-                        break;
-                    }
+                    TempData["AlertDanger"] = "User not found.";
+                    Response.Cookies.Delete("Bearer");
+                    return RedirectToPage("/Index");
                 }
-            }
 
-            else
-            {
-                TempData["AlertDanger"] = "You are not logged in. Please log in or register.";
-                return Redirect("/Index");
-            }
-
-            if (!valid)
-            {
-                TempData["AlertDanger"] = "Incorrect userId found in cookies. Please login or register.";
-                return Redirect("/Logout");
-            }
-
-            String? username = null;
-            user?.TryGetValue("username", out username);
-            if (username != null)
-                TempData["username"] = username;
-
-            const string affirmationsUri = "https://www.affirmations.dev";
-            HttpClient client = new HttpClient();
-            string? affirmation;
-
-            try
-            {
-                affirmation = client.GetStringAsync(affirmationsUri).Result;
-            }
-            catch (Exception ex)
-            {
-                affirmation = null;
-            }
-
-            if (affirmation != null)
-                affirmation = JsonConvert.DeserializeObject<Dictionary<String, String>>(affirmation)?["affirmation"];
-
-            if (affirmation != null)
-                TempData["affirmation"] = affirmation;
-
-            CollectionReference matchesRef = db.Collection("matches");
-            IAsyncEnumerable<DocumentReference> matchRefs =
-                matchesRef.ListDocumentsAsync();
-
-            await foreach (DocumentReference document in matchRefs)
-            {
-                DocumentSnapshot temp = await document.GetSnapshotAsync();
-                if (temp.TryGetValue("userId", out String matchUser))
+                if (!response.StatusCode.Equals(HttpStatusCode.OK))
                 {
-                    if (user?.Id == matchUser)
-                    {
-                        temp.TryGetValue("Date", out String date);
-                        temp.TryGetValue("StartTime", out String startTime);
-                        temp.TryGetValue("EndTime", out String endTime);
-                        temp.TryGetValue("Location", out String location);
-                        temp.TryGetValue("Result", out int result);
-                        temp.TryGetValue("Inner10s", out int inner10s);
-                        matchList.Add(new Dictionary<string, string>
-                        {
-                            {"Date", date},
-                            {"StartTime", startTime},
-                            {"EndTime", endTime},
-                            {"Location", location},
-                            {"Result", result.ToString()},
-                            {"Inner10s", inner10s.ToString()},
-                            {"id", temp.Id}
-                        });
-                    }
+                    TempData["AlertDanger"] = "Something went wrong. Please try again.";
+                    Response.Cookies.Delete("Bearer");
+                    return RedirectToPage("/Index");
                 }
+
+                user = response.Content.ReadFromJsonAsync<UserDto>().Result!;
+
+                request = new HttpRequestMessage(HttpMethod.Get,
+                    "http://172.19.0.3:80/artemis/data/match/get/by-user");
+                request.Headers.Authorization = header;
+                response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+                if (response.StatusCode.Equals(HttpStatusCode.Unauthorized))
+                {
+                    TempData["AlertDanger"] = "You are not logged in.";
+                    Response.Cookies.Delete("Bearer");
+                    return RedirectToPage("/Index");
+                }
+
+                if (response.StatusCode.Equals(HttpStatusCode.NotFound))
+                {
+                    TempData["AlertSuccess"] = "Record your first match.";
+                    return RedirectToPage("/AddMatch");
+                }
+
+                if (!response.StatusCode.Equals(HttpStatusCode.OK))
+                {
+                    TempData["AlertDanger"] = "Something went wrong. Please try again.";
+                    Response.Cookies.Delete("Bearer");
+                    return RedirectToPage("/Index");
+                }
+
+                matches = response.Content.ReadFromJsonAsync<List<MatchOutputDto>>().Result!
+                    .OrderByDescending(x => x.StartTimestamp.TimeStamp.Date).ToList();
+                return Page();
             }
 
-            return null;
+            TempData["AlertDanger"] = "You are not logged in.";
+            return RedirectToPage("/Index");
+        }
+
+        public async Task<IActionResult?> OnPost()
+        {
+            if (!Request.Cookies.TryGetValue("Bearer", out string? bearerToken))
+            {
+                TempData["AlertDanger"] = "You are not logged in.";
+                return RedirectToPage("/Index");
+            }
+
+            List<string?> ids = Request.Form["select"].ToArray().ToList();
+            ids.RemoveAll(x => x.IsNullOrEmpty());
+            List<string> cleanIds = new(ids!);
+
+            if (cleanIds.IsNullOrEmpty())
+            {
+                TempData["AlertDanger"] = "No matches selected, no matches deleted.";
+                return Page();
+            }
+
+            var request = new HttpRequestMessage(HttpMethod.Delete,
+                "http://172.19.0.3:80/artemis/data/match/multi-delete");
+            var client = _httpClientFactory.CreateClient();
+            var header = new AuthenticationHeaderValue("Bearer", bearerToken);
+            request.Headers.Authorization = header;
+            HttpResponseMessage response = await client.SendAsync(request);
+
+            if (response.StatusCode.Equals(HttpStatusCode.OK))
+            {
+                TempData["AlertSuccess"] = "Selected matches were deleted.";
+                return RedirectToPage("/Interface");
+            }
+
+            if (response.StatusCode.Equals(HttpStatusCode.Unauthorized))
+            {
+                TempData["AlertDanger"] = "You are not logged in.";
+                return RedirectToPage("/Index");
+            }
+
+            TempData["AlertDanger"] = "Something went wrong. Please try again.";
+            return RedirectToPage("/Index");
+        }
+
+        public Interface(IHttpClientFactory httpClientFactory)
+        {
+            _httpClientFactory = httpClientFactory;
+            matches = new();
         }
     }
 }

@@ -1,0 +1,192 @@
+﻿@page
+@model ShootingWebsite.Pages.AddMatchModel
+@{
+    ViewData["Title"] = "Match";
+}
+
+<div class="container-fluid" style="font-family: Poppins; font-style: normal">
+    <div class="row bg-black">
+        <div class="d-flex justify-content-center align-items-center col-md-2">
+            <a class="d-flex justify-content-start" asp-page="/Interface">
+                <img class="ms-3 mt-3 mb-3" style="width: 25%" src="img/logocropDark.png" />
+            </a>
+        </div>
+        <div class="col-md-4"></div>
+        <div class="d-flex justify-content-end align-items-center col-md-6">
+            <a asp-page="/Interface" style="font-weight: 400" class="mt-3 mb-3 me-3 btn btn-light">go back</a>
+            <a asp-page="/EditAccount" style="font-weight: 400" class="mt-3 mb-3 me-3 btn btn-light">edit account</a>
+            <a asp-page="/Logout" style="font-weight: 400" class="mt-3 mb-3 me-3 btn btn-light">log out</a>
+        </div>
+    </div>
+    <div class="d-flex row justify-content-center align-items-center">
+        <div class="mt-3 shadow p-3 mb-5 rounded col-md-6">
+            <form method="post">
+                <label for="@Model.MatchCreateRequest.Type" class="form-label">Discipline:</label>
+                <select asp-for="@Model.MatchCreateRequest.Type" class="form-control" id="select-discipline">
+                    <option value="">---Select discipline---</option>
+                    <option value="TS">Trap/skeet</option>
+                    <option value="RFP25">25m rapid fire pistol</option>
+                    <option value="P25">25m pistol</option>
+                    <option value="AR10">10m air rifle</option>
+                    <option value="AP10">10m air pistol</option>
+                    <option value="3P50">50m rifle 3 positions</option>
+                </select>
+                <span asp-validation-for="@Model.MatchCreateRequest.Type" class="text-danger"></span>
+                <br/>
+                <label for="@Model.Date" class="form-label">Date:</label>
+                <input asp-for="@Model.Date" type="date" class="form-control" placeholder="@DateTime.Now.Date.ToString("yyyy-MM-dd")" value="@(Model.Date.ToString("yyyy-MM-dd").Equals("0001-01-01") ? DateTime.Now.Date.ToString("yyyy-MM-dd") : Model.Date.ToString("yyyy-MM-dd"))" />
+                <span asp-validation-for="@Model.Date" class="text-danger"></span>
+                <br />
+                <label for="@Model.StartTime" class="form-label">Start time:</label>
+                <input asp-for="@Model.StartTime" type="time" class="form-control" placeholder="@DateTime.Now.TimeOfDay.ToString("hh\\:mm")" value="@Model.StartTime.TimeOfDay.ToString("hh\\:mm")" />
+                <span asp-validation-for="@Model.StartTime" class="text-danger"></span>
+                <br />
+                <label for="@Model.EndTime" class="form-label">End time:</label>
+                <input asp-for="@Model.EndTime" type="time" class="form-control" placeholder="@DateTime.Now.TimeOfDay.ToString("hh\\:mm")" value="@Model.EndTime.TimeOfDay.ToString("hh\\:mm")" />
+                <span asp-validation-for="@Model.EndTime" class="text-danger"></span>
+                <br />
+                <label for="@Model.CountryName" class="form-label">Country:</label>
+                <input asp-for="@Model.CountryName" type="text" class="form-control" placeholder="Country" value="@Model.CountryName" />
+                <span asp-validation-for="@Model.CountryName" class="text-danger"></span>
+                <br />
+                <label for="@Model.CityName" class="form-label">City:</label>
+                <input asp-for="@Model.CityName" type="text" class="form-control" placeholder="City" value="@Model.CityName" />
+                <span asp-validation-for="@Model.CityName" class="text-danger"></span>
+                <br />
+                <label for="@Model.LocationName" class="form-label">Location:</label>
+                <input asp-for="@Model.LocationName" type="text" class="form-control" placeholder="Location" value="@Model.LocationName" />
+                <span asp-validation-for="@Model.LocationName" class="text-danger"></span>
+                <br />
+                <label for="@Model.MatchCreateRequest.AirTemperature" class="form-label">Air temperature (°C):</label>
+                <input asp-for="@Model.MatchCreateRequest.AirTemperature" type="text" class="form-control" placeholder="25" value="@Model.MatchCreateRequest.AirTemperature" />
+                <br />
+                <label for="@Model.MatchCreateRequest.AirPressure" class="form-label">Air pressure (kPa):</label>
+                <input asp-for="@Model.MatchCreateRequest.AirPressure" type="text" class="form-control" placeholder="1000" value="@Model.MatchCreateRequest.AirPressure" />
+                <br />
+                <label for="@Model.MatchCreateRequest.WindSpeed" class="form-label">Wind speed (km/h):</label>
+                <input asp-for="@Model.MatchCreateRequest.WindSpeed" type="text" class="form-control" placeholder="10" value="@Model.MatchCreateRequest.WindSpeed" />
+                <br />
+                <label for="@Model.MatchCreateRequest.WindDirection" class="form-label">Wind direction (X for no entry):</label>
+                <input asp-for="@Model.MatchCreateRequest.WindDirection" type="text" class="form-control" pattern="^([XNS]?[EW]?){0,2}$" placeholder="N/S/E/W/NE/NW/SE/SW" value="@Model.MatchCreateRequest.WindDirection" />
+                <br />
+                <label for="@Model.MatchCreateRequest.EnvironmentNotes" class="form-label">Notes about your environment:</label>
+                <input asp-for="@Model.MatchCreateRequest.EnvironmentNotes" type="text" class="form-control" placeholder="Notes..." value="@Model.MatchCreateRequest.EnvironmentNotes" />
+                <br />
+                <label for="@Model.MatchCreateRequest.EquipmentNotes" class="form-label">Notes about your equipment:</label>
+                <input asp-for="@Model.MatchCreateRequest.EquipmentNotes" type="text" class="form-control" placeholder="Notes..." value="@Model.MatchCreateRequest.EquipmentNotes" />
+                <br />
+                <label for="@Model.MatchCreateRequest.ShooterNotes" class="form-label">Notes about yourself and the match:</label>
+                <input asp-for="@Model.MatchCreateRequest.ShooterNotes" type="text" class="form-control" placeholder="Notes..." value="@Model.MatchCreateRequest.ShooterNotes" />
+                <br />
+                <div id="shot-fields"></div>
+                <button type="submit" class="btn btn-dark">save match</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    label {
+        display: block;
+    }
+
+    span {
+        display: block;
+        max-width: 25em;
+        word-break: normal;
+    }
+</style>
+
+<script>
+    const fields = document.getElementById("shot-fields");
+    document.getElementById("select-discipline").addEventListener("input", event => {
+        const selected = event.target.value;
+        fields.innerHTML = "";
+
+        let shotAmount;
+
+        if (selected === "") return;
+        else if (selected === "TS") shotAmount = 125;
+        else if (selected === "3P50") shotAmount = 120;
+        else shotAmount = 60;
+
+        for (let i = 1; i <= shotAmount; i++) {
+            const field1 = document.createElement("p");
+            fields.appendChild(field1);
+            field1.style.fontWeight = "700";
+            field1.innerText = `Shot ${i}:`;
+
+            const field2 = document.createElement("label");
+            fields.appendChild(field2);
+            field2.htmlFor = "ShotValue";
+            field2.classList.add("form-label");
+            
+            if (shotAmount === 125) field2.innerText = "Value (0 for miss, 1 for hit):";
+            else field2.innerText = "Decimal shot value (use dot, not comma):";
+
+            const field3 = document.createElement("input");
+            fields.appendChild(field3);
+            field3.name = "ShotValue";
+            field3.type = "text";
+            field3.classList.add("form-control");
+            field3.placeholder = "10.9";
+            field3.required = true;
+
+            if (shotAmount === 125) field3.pattern="^([01]?){1,1}$"
+
+            fields.appendChild(document.createElement("br"));
+
+            // Stop if shot doesn's have other fields.
+            if (shotAmount === 125) continue;
+
+            const field4 = document.createElement("label");
+            fields.appendChild(field4);
+            field4.htmlFor = "ShotTimestamp";
+            field4.classList.add("form-label");
+            field4.innerText = "Time of shot:";
+
+            const field5 = document.createElement("input");
+            fields.appendChild(field5);
+            field5.name = "ShotTimestamp";
+            field5.type = "time";
+            field5.classList.add("form-control");
+            field5.placeholder = "00:00";
+
+            fields.appendChild(document.createElement("br"));
+
+            const field6 = document.createElement("label");
+            fields.appendChild(field6);
+            field6.htmlFor = "ShotHorizontalDisplacement";
+            field6.classList.add("form-label");
+            field6.innerText = "Horizontal displacement (if decimal use dot, not comma):";
+
+            const field7 = document.createElement("input");
+            fields.appendChild(field7);
+            field7.name = "ShotHorizontalDisplacement";
+            field7.type = "text";
+            field7.classList.add("form-control");
+            field7.placeholder = "0.0";
+
+            fields.appendChild(document.createElement("br"));
+
+            const field8 = document.createElement("label");
+            fields.appendChild(field8);
+            field8.htmlFor = "ShotVerticalDisplacement";
+            field8.classList.add("form-label");
+            field8.innerText = "Vertical displacement (if decimal use dot, not comma):";
+
+            const field9 = document.createElement("input");
+            fields.appendChild(field9);
+            field9.name = "ShotVerticalDisplacement";
+            field9.type = "text";
+            field9.classList.add("form-control");
+            field9.placeholder = "0.0";
+
+            fields.appendChild(document.createElement("br"));
+        }
+    });
+</script>
+
+@section scripts{
+    <partial name="Shared/_ValidationScriptsPartial" />
+}

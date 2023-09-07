@@ -1,4 +1,5 @@
 ﻿@page
+@using Microsoft.IdentityModel.Tokens
 @model Register
 @{
     ViewData["Title"] = "Register";
@@ -16,14 +17,37 @@
                 <br/>
                 <div class="d-flex justify-content-center text-start">
                     <form method="post">
-                        <label for="username" class="form-label text-white">username</label>
-                        <input name="username" id="username" type="text" class="form-control" placeholder="coolGuy123" value="@TempData["username"]"/>
+                        <label for="@Model.UserRequest.FirstName" class="form-label text-white">first name</label>
+                        <input asp-for="@Model.UserRequest.FirstName" type="text" class="form-control" placeholder="first name" value="@Model.UserRequest.FirstName"/>
+                        <span asp-validation-for="@Model.UserRequest.FirstName" class="text-white"></span>
                         <br/>
-                        <label for="email" class="form-label text-white">e-mail address</label>
-                        <input name="email" id="email" type="email" class="form-control" placeholder="coolguy123@gmail.com" value="@TempData["email"]"/>
+                        <label for="@Model.UserRequest.AdditionalNames" class="form-label text-white">additional names</label>
+                        <input asp-for="@Model.UserRequest.AdditionalNames" type="text" class="form-control" placeholder="addtl names" value="@Model.UserRequest.AdditionalNames"/>
+                        <span asp-validation-for="@Model.UserRequest.AdditionalNames" class="text-white"></span>
                         <br/>
-                        <label for="password" class="form-label text-white">password</label>
-                        <input name="password" id="password" type="password" class="form-control" placeholder="password"/>
+                        <label for="@Model.UserRequest.LastName" class="form-label text-white">last name</label>
+                        <input asp-for="@Model.UserRequest.LastName" type="text" class="form-control" placeholder="last name" value="@Model.UserRequest.LastName"/>
+                        <span asp-validation-for="@Model.UserRequest.LastName" class="text-white"></span>
+                        <br/>
+                        <label for="@Model.UserRequest.DateOfBirth" class="form-label text-white">date of birth</label>
+                        <input asp-for="@Model.UserRequest.DateOfBirth" type="date" class="form-control" placeholder="@DateTime.Now.Date.ToString("yyyy-MM-dd")" value="@(Model.UserRequest.DateOfBirth.Date.ToString("yyyy-MM-dd").Equals("0001-01-01") ? (DateTime.Now.Date - new TimeSpan(6575, 0, 0, 0)).ToString("yyyy-MM-dd") : Model.UserRequest.DateOfBirth.Date.ToString("yyyy-MM-dd"))" />
+                        <span asp-validation-for="@Model.UserRequest.DateOfBirth" class="text-white"></span>
+                        <br/>
+                        <label for="@Model.UserRequest.Gender" class="form-label text-white">gender</label>
+                        <input asp-for="@Model.UserRequest.Gender" type="text" class="form-control" placeholder="f/m/x" value="@(!Model.UserRequest.Gender.ToString().Contains("xmf") ? "" : Model.UserRequest.Gender)" />
+                        <span asp-validation-for="@Model.UserRequest.Gender" class="text-white"></span>
+                        <br/>
+                        <label for="@Model.UserRequest.PhoneNumber" class="form-label text-white">phone number</label>
+                        <input asp-for="@Model.UserRequest.PhoneNumber" type="tel" class="form-control" placeholder="+385912345678" value="@Model.UserRequest.PhoneNumber"/>
+                        <span asp-validation-for="@Model.UserRequest.PhoneNumber" class="text-white"></span>
+                        <br/>
+                        <label for="@Model.UserRequest.Email" class="form-label text-white">e-mail address</label>
+                        <input asp-for="@Model.UserRequest.Email" type="email" class="form-control" placeholder="coolguy123@gmail.com" value="@Model.UserRequest.Email"/>
+                        <span asp-validation-for="@Model.UserRequest.Email" class="text-white"></span>
+                        <br/>
+                        <label for="@Model.Password" class="form-label text-white">password</label>
+                        <input asp-for="@Model.Password" type="password" class="form-control" placeholder="password" value="@Model.Password"/>
+                        <span asp-validation-for="@Model.Password" class="text-white"></span>
                         <br/>
                         <button type="submit" class="btn btn-dark">register</button>
                     </form>
@@ -47,4 +71,14 @@
     .itembackdrop {
         backdrop-filter: blur(25px) brightness(75%);
     }
+
+    span {
+        display: block;
+        max-width: 20em;
+        word-break: normal;
+    }
 </style>
+
+@section scripts{
+    <partial name="Shared/_ValidationScriptsPartial"/>
+}
